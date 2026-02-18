@@ -5,7 +5,7 @@
 variable "resource_group_name" {
   description = "Name of the Azure Resource Group"
   type        = string
-  default     = "rg-youtube-clone"
+  default     = "rg-youtubeclone"
 }
 
 variable "location" {
@@ -17,7 +17,7 @@ variable "location" {
 variable "acr_name" {
   description = "Name of the Azure Container Registry"
   type        = string
-  default     = "youtubecrdevops"
+  default     = "ytcloneacr8568"
 }
 
 variable "app_service_plan_name" {

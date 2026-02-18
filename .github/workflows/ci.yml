@@ -10,7 +10,7 @@ on:
     branches: [main, develop]
 
 env:
-  ACR_NAME: youtubecrdevops
+  ACR_NAME: ytcloneacr8568
   IMAGE_NAME: youtube-clone
 
 permissions:

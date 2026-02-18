@@ -15,8 +15,8 @@ terraform {
 
   # Remote backend - Azure Storage
   backend "azurerm" {
-    resource_group_name  = "rg-terraform-state"
-    storage_account_name = "tfstateyoutubeclone"
+    resource_group_name  = "rg-youtubeclone-tfstate"
+    storage_account_name = "ytclonetfstate26538"
     container_name       = "tfstate"
     key                  = "youtube-clone.terraform.tfstate"
   }

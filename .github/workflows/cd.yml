@@ -10,9 +10,9 @@ on:
     branches: [main, develop]
 
 env:
-  ACR_NAME: youtubecrdevops
+  ACR_NAME: ytcloneacr8568
   IMAGE_NAME: youtube-clone
-  RESOURCE_GROUP: rg-youtube-clone
+  RESOURCE_GROUP: rg-youtubeclone
   APP_SERVICE_PLAN: asp-youtube-clone
   WEBAPP_NAME_PROD: youtube-clone-prod
   WEBAPP_NAME_STAGING: youtube-clone-staging
