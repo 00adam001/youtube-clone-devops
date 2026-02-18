@@ -1,0 +1,89 @@
+# ============================================
+# CD Pipeline - Deploy to Azure App Service
+# ============================================
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+    branches: [main, develop]
+
+env:
+  ACR_NAME: youtubecrdevops
+  IMAGE_NAME: youtube-clone
+  RESOURCE_GROUP: rg-youtube-clone
+  APP_SERVICE_PLAN: asp-youtube-clone
+  WEBAPP_NAME_PROD: youtube-clone-prod
+  WEBAPP_NAME_STAGING: youtube-clone-staging
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ----------------------------------------
+  # Deploy to Staging (develop branch)
+  # ----------------------------------------
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'develop' }}
+    environment:
+      name: staging
+      url: https://${{ env.WEBAPP_NAME_STAGING }}.azurewebsites.net
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App (Staging)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.WEBAPP_NAME_STAGING }}
+          images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:develop-latest
+
+      - name: Health check
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.WEBAPP_NAME_STAGING }}.azurewebsites.net/health)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ Staging deployment healthy!"
+          else
+            echo "⚠️ Health check returned status: $STATUS"
+          fi
+
+  # ----------------------------------------
+  # Deploy to Production (main branch)
+  # ----------------------------------------
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    environment:
+      name: production
+      url: https://${{ env.WEBAPP_NAME_PROD }}.azurewebsites.net
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App (Production)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.WEBAPP_NAME_PROD }}
+          images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+
+      - name: Health check
+        run: |
+          echo "Waiting for deployment to stabilize..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.WEBAPP_NAME_PROD }}.azurewebsites.net/health)
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ Production deployment healthy!"
+          else
+            echo "⚠️ Health check returned status: $STATUS"
+          fi

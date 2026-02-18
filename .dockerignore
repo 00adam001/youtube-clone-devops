@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+build
+coverage
+.vscode
+.idea
+*.md
+.terraform
+terraform/.terraform
+terraform/*.tfstate*
