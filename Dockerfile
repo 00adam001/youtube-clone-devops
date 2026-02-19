@@ -16,10 +16,9 @@ COPY . .
 
 # Build argument for API key (injected at build time)
 ARG REACT_APP_RAPID_API_KEY
-ENV REACT_APP_RAPID_API_KEY=$REACT_APP_RAPID_API_KEY
 
 # Build the production app
-RUN npm run build
+RUN REACT_APP_RAPID_API_KEY=$REACT_APP_RAPID_API_KEY npm run build
 
 # ============================================
 # Stage 2: Serve with Nginx
