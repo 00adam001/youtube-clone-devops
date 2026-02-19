@@ -1,5 +1,5 @@
 # ============================================
-# CD Pipeline - Deploy to Azure App Service
+# CD Pipeline - Deploy to Azure Container Instances
 # ============================================
 name: CD Pipeline
 
@@ -8,14 +8,23 @@ on:
     workflows: ["CI Pipeline"]
     types: [completed]
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
 env:
   ACR_NAME: ytcloneacr8568
   IMAGE_NAME: youtube-clone
   RESOURCE_GROUP: rg-youtubeclone
-  APP_SERVICE_PLAN: asp-youtube-clone
-  WEBAPP_NAME_PROD: youtube-clone-prod
-  WEBAPP_NAME_STAGING: youtube-clone-staging
+  CONTAINER_NAME_PROD: youtube-clone-prod
+  CONTAINER_NAME_STAGING: youtube-clone-staging
 
 permissions:
   id-token: write
@@ -28,31 +37,43 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'develop' }}
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'develop')
     environment:
       name: staging
-      url: https://${{ env.WEBAPP_NAME_STAGING }}.azurewebsites.net
     steps:
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Web App (Staging)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.WEBAPP_NAME_STAGING }}
-          images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:develop-latest
+      - name: Deploy to ACI (Staging)
+        run: |
+          az container create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME_STAGING }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:develop-latest \
+            --registry-login-server ${{ env.ACR_NAME }}.azurecr.io \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --dns-name-label ${{ env.CONTAINER_NAME_STAGING }} \
+            --ports 80 \
+            --os-type Linux \
+            --cpu 0.5 \
+            --memory 0.5 \
+            --restart-policy Always
 
       - name: Health check
         run: |
           echo "Waiting for deployment to stabilize..."
           sleep 30
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.WEBAPP_NAME_STAGING }}.azurewebsites.net/health)
+          FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME_STAGING }} --query "ipAddress.fqdn" -o tsv)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${FQDN}/health || echo "000")
           if [ "$STATUS" -eq 200 ]; then
-            echo "✅ Staging deployment healthy!"
+            echo "✅ Staging deployment healthy at http://${FQDN}"
           else
-            echo "⚠️ Health check returned status: $STATUS"
+            echo "⚠️ Health check returned status: $STATUS at http://${FQDN}"
           fi
 
   # ----------------------------------------
@@ -61,29 +82,41 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     environment:
       name: production
-      url: https://${{ env.WEBAPP_NAME_PROD }}.azurewebsites.net
     steps:
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Web App (Production)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.WEBAPP_NAME_PROD }}
-          images: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
+      - name: Deploy to ACI (Production)
+        run: |
+          az container create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_NAME_PROD }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest \
+            --registry-login-server ${{ env.ACR_NAME }}.azurecr.io \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --dns-name-label ${{ env.CONTAINER_NAME_PROD }} \
+            --ports 80 \
+            --os-type Linux \
+            --cpu 0.5 \
+            --memory 0.5 \
+            --restart-policy Always
 
       - name: Health check
         run: |
           echo "Waiting for deployment to stabilize..."
           sleep 30
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.WEBAPP_NAME_PROD }}.azurewebsites.net/health)
+          FQDN=$(az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_NAME_PROD }} --query "ipAddress.fqdn" -o tsv)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://${FQDN}/health || echo "000")
           if [ "$STATUS" -eq 200 ]; then
-            echo "✅ Production deployment healthy!"
+            echo "✅ Production deployment healthy at http://${FQDN}"
           else
-            echo "⚠️ Health check returned status: $STATUS"
+            echo "⚠️ Health check returned status: $STATUS at http://${FQDN}"
           fi

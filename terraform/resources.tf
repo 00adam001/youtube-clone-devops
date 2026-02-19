@@ -16,19 +16,7 @@ data "azurerm_container_registry" "acr" {
 }
 
 # ============================================
-# App Service Plan (Linux)
-# ============================================
-resource "azurerm_service_plan" "main" {
-  name                = var.app_service_plan_name
-  resource_group_name = data.azurerm_resource_group.main.name
-  location            = data.azurerm_resource_group.main.location
-  os_type             = "Linux"
-  sku_name            = var.app_service_sku
-  tags                = var.tags
-}
-
-# ============================================
-# Log Analytics Workspace (for App Insights)
+# Log Analytics Workspace (for monitoring)
 # ============================================
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "law-youtube-clone"
@@ -52,61 +40,73 @@ resource "azurerm_application_insights" "main" {
 }
 
 # ============================================
-# Production Web App
+# Production Container Instance
 # ============================================
-resource "azurerm_linux_web_app" "prod" {
+resource "azurerm_container_group" "prod" {
   name                = var.webapp_name_prod
-  resource_group_name = data.azurerm_resource_group.main.name
   location            = data.azurerm_resource_group.main.location
-  service_plan_id     = azurerm_service_plan.main.id
+  resource_group_name = data.azurerm_resource_group.main.name
+  os_type             = "Linux"
+  ip_address_type     = "Public"
+  dns_name_label      = var.webapp_name_prod
+  restart_policy      = "Always"
   tags                = merge(var.tags, { environment = "production" })
 
-  site_config {
-    always_on = true
+  container {
+    name   = "youtube-clone"
+    image  = "${data.azurerm_container_registry.acr.login_server}/youtube-clone:latest"
+    cpu    = "0.5"
+    memory = "0.5"
 
-    application_stack {
-      docker_registry_url      = "https://${data.azurerm_container_registry.acr.login_server}"
-      docker_image_name        = "youtube-clone:latest"
-      docker_registry_username = data.azurerm_container_registry.acr.admin_username
-      docker_registry_password = data.azurerm_container_registry.acr.admin_password
+    ports {
+      port     = 80
+      protocol = "TCP"
     }
-
-    health_check_path = "/health"
   }
 
-  app_settings = {
-    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    "DOCKER_ENABLE_CI"                    = "true"
-    "APPINSIGHTS_INSTRUMENTATIONKEY"      = azurerm_application_insights.main.instrumentation_key
+  image_registry_credential {
+    server   = data.azurerm_container_registry.acr.login_server
+    username = data.azurerm_container_registry.acr.admin_username
+    password = data.azurerm_container_registry.acr.admin_password
+  }
+
+  lifecycle {
+    ignore_changes = [container]
   }
 }
 
 # ============================================
-# Staging Web App
+# Staging Container Instance
 # ============================================
-resource "azurerm_linux_web_app" "staging" {
+resource "azurerm_container_group" "staging" {
   name                = var.webapp_name_staging
-  resource_group_name = data.azurerm_resource_group.main.name
   location            = data.azurerm_resource_group.main.location
-  service_plan_id     = azurerm_service_plan.main.id
+  resource_group_name = data.azurerm_resource_group.main.name
+  os_type             = "Linux"
+  ip_address_type     = "Public"
+  dns_name_label      = var.webapp_name_staging
+  restart_policy      = "Always"
   tags                = merge(var.tags, { environment = "staging" })
 
-  site_config {
-    always_on = true
+  container {
+    name   = "youtube-clone"
+    image  = "${data.azurerm_container_registry.acr.login_server}/youtube-clone:develop-latest"
+    cpu    = "0.5"
+    memory = "0.5"
 
-    application_stack {
-      docker_registry_url      = "https://${data.azurerm_container_registry.acr.login_server}"
-      docker_image_name        = "youtube-clone:develop-latest"
-      docker_registry_username = data.azurerm_container_registry.acr.admin_username
-      docker_registry_password = data.azurerm_container_registry.acr.admin_password
+    ports {
+      port     = 80
+      protocol = "TCP"
     }
-
-    health_check_path = "/health"
   }
 
-  app_settings = {
-    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    "DOCKER_ENABLE_CI"                    = "true"
-    "APPINSIGHTS_INSTRUMENTATIONKEY"      = azurerm_application_insights.main.instrumentation_key
+  image_registry_credential {
+    server   = data.azurerm_container_registry.acr.login_server
+    username = data.azurerm_container_registry.acr.admin_username
+    password = data.azurerm_container_registry.acr.admin_password
+  }
+
+  lifecycle {
+    ignore_changes = [container]
   }
 }

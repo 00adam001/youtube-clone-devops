@@ -20,12 +20,6 @@ variable "acr_name" {
   default     = "ytcloneacr8568"
 }
 
-variable "app_service_plan_name" {
-  description = "Name of the App Service Plan"
-  type        = string
-  default     = "asp-youtube-clone"
-}
-
 variable "webapp_name_prod" {
   description = "Name of the production Web App"
   type        = string
@@ -36,12 +30,6 @@ variable "webapp_name_staging" {
   description = "Name of the staging Web App"
   type        = string
   default     = "youtube-clone-staging"
-}
-
-variable "app_service_sku" {
-  description = "SKU for the App Service Plan"
-  type        = string
-  default     = "B1"
 }
 
 variable "acr_sku" {

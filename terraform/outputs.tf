@@ -25,13 +25,13 @@ output "acr_admin_password" {
 }
 
 output "webapp_prod_url" {
-  description = "Production Web App URL"
-  value       = "https://${azurerm_linux_web_app.prod.default_hostname}"
+  description = "Production Container URL"
+  value       = "http://${azurerm_container_group.prod.fqdn}"
 }
 
 output "webapp_staging_url" {
-  description = "Staging Web App URL"
-  value       = "https://${azurerm_linux_web_app.staging.default_hostname}"
+  description = "Staging Container URL"
+  value       = "http://${azurerm_container_group.staging.fqdn}"
 }
 
 output "app_insights_instrumentation_key" {
