@@ -6,7 +6,7 @@
 
 A modern YouTube clone built with **React 18** and **Material UI 5**, deployed on **Azure** with a complete **DevOps CI/CD pipeline** using **GitHub Actions** and **Terraform**.
 
-> **Live Demo:** [https://youtube-clone-prod.azurewebsites.net](https://youtube-clone-prod.azurewebsites.net)
+> **Live Demo:** [http://youtube-clone-prod.eastus.azurecontainer.io](http://youtube-clone-prod.eastus.azurecontainer.io)
 
 ---
 
@@ -41,7 +41,7 @@ Developer → GitHub (PR)
     │    Azure Cloud       │
     │  ┌────────────────┐  │
     │  │ Container Reg.  │ │
-    │  │ App Service     │ │
+    │  │ Container Inst. │ │
     │  │ App Insights    │ │
     │  │ Log Analytics   │ │
     │  └────────────────┘  │
@@ -59,7 +59,7 @@ Developer → GitHub (PR)
 | **Containerization** | Docker (multi-stage: Node 18 → Nginx) |
 | **CI/CD** | GitHub Actions (3 workflows) |
 | **Infrastructure** | Terraform (Azure provider) |
-| **Cloud** | Azure App Service, ACR, Application Insights |
+| **Cloud** | Azure Container Instances, ACR, Application Insights |
 | **Code Quality** | ESLint, Prettier, Jest |
 | **Security** | Trivy container scanning, npm audit |
 | **Monitoring** | Azure Application Insights, Log Analytics |
@@ -154,7 +154,7 @@ docker run -p 80:80 youtube-clone
 6. **Push** — Push image to Azure Container Registry
 
 **CD Pipeline** (on CI success):
-1. **Deploy** — Update Azure App Service with new image
+1. **Deploy** — Update Azure Container Instance with new image
 2. **Health Check** — Verify deployment is healthy
 
 **Infrastructure Pipeline** (on terraform/ changes):
@@ -171,9 +171,8 @@ All infrastructure is managed with Terraform:
 |----------|---------|
 | Resource Group | Logical container for all resources |
 | Container Registry (ACR) | Store Docker images |
-| App Service Plan (B1) | Compute for web apps |
-| Web App (Production) | Production deployment |
-| Web App (Staging) | Staging deployment |
+| Container Instance (Prod) | Production container deployment |
+| Container Instance (Staging) | Staging container deployment |
 | Application Insights | Monitoring & telemetry |
 | Log Analytics Workspace | Centralized logging |
 
